@@ -1,0 +1,295 @@
+Here is the complete **100% Python source code** for the **Contacts List Management System**:
+
+```python
+import csv
+import json
+import os
+import re
+
+CONTACTS_FILE = "contacts.json"
+
+def load_contacts():
+  """Load contacts from JSON file into memory."""
+  if not os.path.exists(CONTACTS_FILE):
+    return {}
+  try:
+    with open(CONTACTS_FILE, "r") as file:
+      return json.load(file)
+  except (json.JSONDecodeError, IOError):
+    print(
+        "Warning: Could not read contacts file. Starting with an empty contact"
+        " list."
+    )
+    return {}
+
+def save_contacts(contacts):
+  """Save contacts dictionary to JSON file."""
+  try:
+    with open(CONTACTS_FILE, "w") as file:
+      json.dump(contacts, file, indent=4)
+  except IOError as e:
+    print(f"Error saving contacts to file: {e}")
+
+def validate_mobile(mobile):
+  """Validate 10-digit numeric mobile number."""
+  return bool(re.match(r"^\d{10}$", mobile.strip()))
+
+def validate_email(email):
+  """Validate standard email syntax."""
+  return bool(re.match(r"^[\w\.-]+@[\w\.-]+\.\w+$", email.strip()))
+
+def add_contact(contacts):
+  """Add a new contact with input validation."""
+  print("\n--- Add New Contact ---")
+  name = input("Enter Name: ").strip()
+  if not name:
+    print("Error: Name cannot be empty.")
+    return
+
+  if name in contacts:
+    print(f"Error: Contact with name '{name}' already exists.")
+    return
+
+  while True:
+    mobile = input("Enter 10-digit Mobile Number: ").strip()
+    if validate_mobile(mobile):
+      break
+    print("Invalid mobile number! Please enter exactly 10 digits.")
+
+  while True:
+    email = input("Enter Email Address: ").strip()
+    if validate_email(email):
+      break
+    print("Invalid email format! (e.g., user@domain.com)")
+
+  address = input("Enter Address: ").strip()
+  organization = input("Enter Organization: ").strip()
+
+  contacts[name] = {
+      "Mobile": mobile,
+      "Email": email,
+      "Address": address,
+      "Organization": organization,
+  }
+  save_contacts(contacts)
+  print(f"Success: Contact '{name}' added successfully!")
+
+def view_contacts(contacts):
+  """View all contacts in a formatted tabular layout."""
+  print("\n--- All Contacts ---")
+  if not contacts:
+    print("No contacts found.")
+    return
+
+  header = (
+      f"{'Name':<20} | {'Mobile':<12} | {'Email':<25} | {'Organization':<20}"
+  )
+  print("-" * len(header))
+  print(header)
+  print("-" * len(header))
+
+  for name, info in sorted(contacts.items()):
+    print(
+        f"{name:<20} | {info['Mobile']:<12} | {info['Email']:<25} |"
+        f" {info.get('Organization', 'N/A'):<20}"
+    )
+  print("-" * len(header))
+
+def search_contact(contacts):
+  """Search contact by name or mobile number (case-insensitive)."""
+  print("\n--- Search Contact ---")
+  query = input("Enter Name or Mobile Number to search: ").strip().lower()
+  if not query:
+    print("Search query cannot be empty.")
+    return
+
+  found = False
+  for name, info in contacts.items():
+    if query in name.lower() or query in info["Mobile"]:
+      print("\nContact Found:")
+      print(f"  Name        : {name}")
+      print(f"  Mobile      : {info['Mobile']}")
+      print(f"  Email       : {info['Email']}")
+      print(f"  Address     : {info.get('Address', 'N/A')}")
+      print(f"  Organization: {info.get('Organization', 'N/A')}")
+      found = True
+
+  if not found:
+    print("No matching contact found.")
+
+def update_contact(contacts):
+  """Update details of an existing contact record."""
+  print("\n--- Update Contact ---")
+  name = input("Enter Name of the contact to update: ").strip()
+  if name not in contacts:
+    print(f"Error: Contact '{name}' not found.")
+    return
+
+  print("Press Enter to keep existing values.")
+  info = contacts[name]
+
+  new_mobile = input(f"New Mobile [{info['Mobile']}]: ").strip()
+  if new_mobile:
+    if validate_mobile(new_mobile):
+      info["Mobile"] = new_mobile
+    else:
+      print("Invalid mobile number! Retaining existing mobile.")
+
+  new_email = input(f"New Email [{info['Email']}]: ").strip()
+  if new_email:
+    if validate_email(new_email):
+      info["Email"] = new_email
+    else:
+      print("Invalid email format! Retaining existing email.")
+
+  new_address = input(f"New Address [{info['Address']}]: ").strip()
+  if new_address:
+    info["Address"] = new_address
+
+  new_org = input(f"New Organization [{info['Organization']}]: ").strip()
+  if new_org:
+    info["Organization"] = new_org
+
+  contacts[name] = info
+  save_contacts(contacts)
+  print(f"Success: Contact '{name}' updated successfully!")
+
+def delete_contact(contacts):
+  """Delete an unwanted contact entry."""
+  print("\n--- Delete Contact ---")
+  name = input("Enter Name of the contact to delete: ").strip()
+  if name not in contacts:
+    print(f"Error: Contact '{name}' not found.")
+    return
+
+  confirm = (
+      input(f"Are you sure you want to delete '{name}'? (y/n): ")
+      .strip()
+      .lower()
+  )
+  if confirm == "y":
+    del contacts[name]
+    save_contacts(contacts)
+    print(f"Success: Contact '{name}' deleted successfully!")
+  else:
+    print("Deletion canceled.")
+
+def export_to_csv(contacts):
+  """Export contacts to a CSV file for spreadsheet integration."""
+  print("\n--- Export Contacts to CSV ---")
+  if not contacts:
+    print("No contacts available to export.")
+    return
+
+  filename = input(
+      "Enter export CSV filename (default: contacts_export.csv): "
+  ).strip()
+  if not filename:
+    filename = "contacts_export.csv"
+  if not filename.endswith(".csv"):
+    filename += ".csv"
+
+  try:
+    with open(filename, "w", newline="", encoding="utf-8") as csvfile:
+      fieldnames = ["Name", "Mobile", "Email", "Address", "Organization"]
+      writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+      writer.writeheader()
+      for name, info in sorted(contacts.items()):
+        writer.writerow({
+            "Name": name,
+            "Mobile": info.get("Mobile", ""),
+            "Email": info.get("Email", ""),
+            "Address": info.get("Address", ""),
+            "Organization": info.get("Organization", ""),
+        })
+    print(f"Success: Exported {len(contacts)} contact(s) to '{filename}'.")
+  except IOError as e:
+    print(f"Error exporting to CSV: {e}")
+
+def import_from_csv(contacts):
+  """Import contacts from a CSV spreadsheet file."""
+  print("\n--- Import Contacts from CSV ---")
+  filename = input(
+      "Enter CSV filename to import (e.g., import.csv): "
+  ).strip()
+  if not os.path.exists(filename):
+    print(f"Error: File '{filename}' not found.")
+    return
+
+  imported_count = 0
+  skipped_count = 0
+
+  try:
+    with open(filename, "r", encoding="utf-8") as csvfile:
+      reader = csv.DictReader(csvfile)
+      for row in reader:
+        name = row.get("Name", "").strip()
+        mobile = row.get("Mobile", "").strip()
+        email = row.get("Email", "").strip()
+        address = row.get("Address", "").strip()
+        organization = row.get("Organization", "").strip()
+
+        if not name or not validate_mobile(mobile):
+          skipped_count += 1
+          continue
+
+        contacts[name] = {
+            "Mobile": mobile,
+            "Email": email if validate_email(email) else "N/A",
+            "Address": address if address else "N/A",
+            "Organization": organization if organization else "N/A",
+        }
+        imported_count += 1
+
+    if imported_count > 0:
+      save_contacts(contacts)
+      print(
+          f"Success: Successfully imported {imported_count} contact(s) from"
+          f" '{filename}'."
+      )
+    if skipped_count > 0:
+      print(
+          f"Notice: Skipped {skipped_count} row(s) due to missing name or"
+          " invalid mobile formatting."
+      )
+  except Exception as e:
+    print(f"Error reading CSV file: {e}")
+
+def main():
+  """Main menu application loop."""
+  contacts = load_contacts()
+  while True:
+    print("\n===== CONTACT LIST MANAGEMENT SYSTEM =====")
+    print("1. Add Contact")
+    print("2. View Contacts")
+    print("3. Search Contact")
+    print("4. Update Contact")
+    print("5. Delete Contact")
+    print("6. Export Contacts to CSV")
+    print("7. Import Contacts from CSV")
+    print("8. Exit")
+    choice = input("Enter choice (1-8): ").strip()
+
+    if choice == "1":
+      add_contact(contacts)
+    elif choice == "2":
+      view_contacts(contacts)
+    elif choice == "3":
+      search_contact(contacts)
+    elif choice == "4":
+      update_contact(contacts)
+    elif choice == "5":
+      delete_contact(contacts)
+    elif choice == "6":
+      export_to_csv(contacts)
+    elif choice == "7":
+      import_from_csv(contacts)
+    elif choice == "8":
+      print("Thank you for using Contact List Management System!")
+      break
+    else:
+      print("Invalid choice. Please enter a number between 1 and 8.")
+
+if __name__ == "__main__":
+  main()
+```
